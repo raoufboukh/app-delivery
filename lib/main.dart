@@ -9,12 +9,21 @@ import 'package:project/view/login/welcome_view.dart';
 import 'package:project/view/main_tabview/main_tabview.dart';
 import 'package:project/view/on_boarding/startup_view.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'common/globs.dart';
 import 'common/my_http_overrides.dart';
 
 SharedPreferences? prefs;
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Supabase
+  await Supabase.initialize(
+    url: 'https://eatzxylelqlysdikcdlb.supabase.co',
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhdHp4eWxlbHFseXNkaWtjZGxiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzE1MTcyOTIsImV4cCI6MjA0NzA5MzI5Mn0.111wXvqLwLdZfhu-lH-l-bu4TRtdePCkABvlZ_D6GRM',
+  );
   setUpLocator();
   HttpOverrides.global = MyHttpOverrides();
   WidgetsFlutterBinding.ensureInitialized();

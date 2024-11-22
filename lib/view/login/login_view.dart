@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:project/auth/auth_service.dart';
 import 'package:project/common/color_extension.dart';
-import 'package:project/common/extension.dart';
-import 'package:project/common/globs.dart';
 import 'package:project/common_widget/round_button.dart';
 import 'package:project/view/login/rest_password_view.dart';
 import 'package:project/view/login/sign_up_view.dart';
-import 'package:project/view/on_boarding/on_boarding_view.dart';
+import 'package:project/view/main_tabview/main_tabview.dart';
 
-import '../../common/service_call.dart';
 import '../../common_widget/round_icon_button.dart';
 import '../../common_widget/round_textfield.dart';
 
@@ -19,8 +17,37 @@ class LoginView extends StatefulWidget {
 }
 
 class _LoginViewState extends State<LoginView> {
-  TextEditingController txtEmail = TextEditingController();
-  TextEditingController txtPassword = TextEditingController();
+  // get auth service
+  final authService = AuthService();
+
+  // text controllers
+  final _txtEmail = TextEditingController();
+  final _txtPassword = TextEditingController();
+
+  // login button pressed
+  void login() async {
+    //   prepare data
+    final email = _txtEmail.text;
+    final password = _txtPassword.text;
+
+    //attempt login..
+    try {
+      await authService.signInWithEmailPassword(
+          email: email, password: password);
+
+      Navigator.pop(context);
+      Navigator.push(context,
+          MaterialPageRoute(builder: (context) => const MainTabView()));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error: $e"),
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +82,7 @@ class _LoginViewState extends State<LoginView> {
               ),
               RoundTextfield(
                 hintText: "Your Email",
-                controller: txtEmail,
+                controller: _txtEmail,
                 keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(
@@ -63,7 +90,7 @@ class _LoginViewState extends State<LoginView> {
               ),
               RoundTextfield(
                 hintText: "Password",
-                controller: txtPassword,
+                controller: _txtPassword,
                 obscureText: true,
               ),
               const SizedBox(
@@ -71,11 +98,12 @@ class _LoginViewState extends State<LoginView> {
               ),
               RoundButton(
                   title: "Login",
-                  onPressed: () {
-                    // btnLogin();
-                    Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(builder: (context) => const OnBoardingView()));
-                  }),
+                  // onPressed: () {
+                  //   // btnLogin();
+                  //   Navigator.of(context).pushReplacement(MaterialPageRoute(
+                  //       builder: (context) => const OnBoardingView()));
+                  // }
+                  onPressed: login),
               const SizedBox(
                 height: 4,
               ),
@@ -161,54 +189,5 @@ class _LoginViewState extends State<LoginView> {
         ),
       ),
     );
-  }
-
-  //TODO: Action
-  void btnLogin() {
-    if (!txtEmail.text.isEmail) {
-      mdShowAlert(Globs.appName, MSG.enterEmail, () {});
-      return;
-    }
-
-    if (txtPassword.text.length < 6) {
-      mdShowAlert(Globs.appName, MSG.enterPassword, () {});
-      return;
-    }
-
-    endEditing();
-
-    serviceCallLogin({
-      "email": txtEmail.text,
-      "password": txtPassword.text,
-      "push_token": ""
-    });
-  }
-
-  //TODO: ServiceCall
-
-  void serviceCallLogin(Map<String, dynamic> parameter) {
-    Globs.showHUD();
-
-    ServiceCall.post(parameter, SVKey.svLogin,
-        withSuccess: (responseObj) async {
-      Globs.hideHUD();
-      if (responseObj[KKey.status] == "1") {
-        Globs.udSet(responseObj[KKey.payload] as Map? ?? {}, Globs.userPayload);
-        Globs.udBoolSet(true, Globs.userLogin);
-
-        Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const OnBoardingView(),
-            ),
-            (route) => false);
-      } else {
-        mdShowAlert(Globs.appName,
-            responseObj[KKey.message] as String? ?? MSG.fail, () {});
-      }
-    }, failure: (err) async {
-      Globs.hideHUD();
-      mdShowAlert(Globs.appName, err.toString(), () {});
-    });
   }
 }

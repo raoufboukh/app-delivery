@@ -1,16 +1,11 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
+import 'package:project/auth/auth_service.dart';
 import 'package:project/common/color_extension.dart';
-import 'package:project/common/extension.dart';
 import 'package:project/common_widget/round_button.dart';
 import 'package:project/view/login/login_view.dart';
-import 'package:project/view/login/otp_view.dart';
+import 'package:project/view/main_tabview/main_tabview.dart';
 
-import '../../common/globs.dart';
-import '../../common/service_call.dart';
 import '../../common_widget/round_textfield.dart';
-import '../on_boarding/on_boarding_view.dart';
 
 class SignUpView extends StatefulWidget {
   const SignUpView({super.key});
@@ -20,12 +15,49 @@ class SignUpView extends StatefulWidget {
 }
 
 class _SignUpViewState extends State<SignUpView> {
-  TextEditingController txtName = TextEditingController();
-  TextEditingController txtMobile = TextEditingController();
-  TextEditingController txtAddress = TextEditingController();
-  TextEditingController txtEmail = TextEditingController();
-  TextEditingController txtPassword = TextEditingController();
-  TextEditingController txtConfirmPassword = TextEditingController();
+  // get auth service
+  final authService = AuthService();
+
+  // text controllers
+  final _txtEmail = TextEditingController();
+  final _txtPassword = TextEditingController();
+  final _txtConfirmPassword = TextEditingController();
+
+  // sign up button pressed
+  void signUp() async {
+    //   prepare data
+    final email = _txtEmail.text;
+    final password = _txtPassword.text;
+    final confirmPassword = _txtConfirmPassword.text;
+
+    // check if password and confirm password are same
+    if (password != confirmPassword) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text("Passwords don't match"),
+        ),
+      );
+      return;
+    }
+
+    //attempt sign up..
+    try {
+      await authService.signInWithEmailPassword(
+          email: email, password: password);
+
+      Navigator.pop(context);
+      Navigator.push(context,
+          MaterialPageRoute(builder: (context) => const MainTabView()));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error: $e"),
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,38 +89,15 @@ class _SignUpViewState extends State<SignUpView> {
                 height: 25,
               ),
               RoundTextfield(
-                hintText: "Name",
-                controller: txtName,
-              ),
-              const SizedBox(
-                height: 25,
-              ),
-              RoundTextfield(
                 hintText: "Email",
-                controller: txtEmail,
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(
-                height: 25,
-              ),
-              RoundTextfield(
-                hintText: "Mobile No",
-                controller: txtMobile,
-                keyboardType: TextInputType.phone,
-              ),
-              const SizedBox(
-                height: 25,
-              ),
-              RoundTextfield(
-                hintText: "Address",
-                controller: txtAddress,
+                controller: _txtEmail,
               ),
               const SizedBox(
                 height: 25,
               ),
               RoundTextfield(
                 hintText: "Password",
-                controller: txtPassword,
+                controller: _txtPassword,
                 obscureText: true,
               ),
               const SizedBox(
@@ -96,23 +105,13 @@ class _SignUpViewState extends State<SignUpView> {
               ),
               RoundTextfield(
                 hintText: "Confirm Password",
-                controller: txtConfirmPassword,
+                controller: _txtConfirmPassword,
                 obscureText: true,
               ),
               const SizedBox(
                 height: 25,
               ),
-              RoundButton(
-                  title: "Sign Up",
-                  onPressed: () {
-                    // btnSignUp();
-                     Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => OTPView(email: txtEmail.text),
-                          ),
-                        );
-                  }),
+              RoundButton(title: "Sign Up", onPressed: signUp),
               const SizedBox(
                 height: 30,
               ),
@@ -150,78 +149,5 @@ class _SignUpViewState extends State<SignUpView> {
         ),
       ),
     );
-  }
-
-  //TODO: Action
-  void btnSignUp() {
-    if (txtName.text.isEmpty) {
-      mdShowAlert(Globs.appName, MSG.enterName, () {});
-      return;
-    }
-
-    if (!txtEmail.text.isEmail) {
-      mdShowAlert(Globs.appName, MSG.enterEmail, () {});
-      return;
-    }
-
-    if (txtMobile.text.isEmpty) {
-      mdShowAlert(Globs.appName, MSG.enterMobile, () {});
-      return;
-    }
-
-    if (txtAddress.text.isEmpty) {
-      mdShowAlert(Globs.appName, MSG.enterAddress, () {});
-      return;
-    }
-
-    if (txtPassword.text.length < 6) {
-      mdShowAlert(Globs.appName, MSG.enterPassword, () {});
-      return;
-    }
-
-    if (txtPassword.text != txtConfirmPassword.text) {
-      mdShowAlert(Globs.appName, MSG.enterPasswordNotMatch, () {});
-      return;
-    }
-
-    endEditing();
-
-    serviceCallSignUp({
-      "name": txtName.text,
-      "mobile": txtMobile.text,
-      "email": txtEmail.text,
-      "address": txtAddress.text,
-      "password": txtPassword.text,
-      "push_token": "",
-      "device_type": Platform.isAndroid ? "A" : "I"
-    });
-  }
-
-  //TODO: ServiceCall
-
-  void serviceCallSignUp(Map<String, dynamic> parameter) {
-    Globs.showHUD();
-
-    ServiceCall.post(parameter, SVKey.svSignUp,
-        withSuccess: (responseObj) async {
-      Globs.hideHUD();
-      if (responseObj[KKey.status] == "1") {
-        Globs.udSet(responseObj[KKey.payload] as Map? ?? {}, Globs.userPayload);
-        Globs.udBoolSet(true, Globs.userLogin);
-
-        Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const OnBoardingView(),
-            ),
-            (route) => false);
-      } else {
-        mdShowAlert(Globs.appName,
-            responseObj[KKey.message] as String? ?? MSG.fail, () {});
-      }
-    }, failure: (err) async {
-      Globs.hideHUD();
-      mdShowAlert(Globs.appName, err.toString(), () {});
-    });
   }
 }

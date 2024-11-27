@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:project/common/color_extension.dart';
+import 'package:project/common/globs.dart';
+import 'package:project/common/service_call.dart';
+import 'package:project/common_widget/category_cell.dart';
+import 'package:project/common_widget/popular_restaurant_row.dart';
 import 'package:project/common_widget/round_textfield.dart';
-
-import '../../common/globs.dart';
-import '../../common/service_call.dart';
-import '../../common_widget/category_cell.dart';
-import '../../common_widget/most_popular_cell.dart';
-import '../../common_widget/popular_restaurant_row.dart';
-import '../../common_widget/recent_item_row.dart';
-import '../../common_widget/view_all_title_row.dart';
-import '../more/my_order_view.dart';
+import 'package:project/common_widget/view_all_title_row.dart';
+import 'package:project/view/more/my_order_view.dart';
+import 'package:project/view/regions/restaurant.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase/supabase.dart'; // Import the correct package for PostgrestResponse
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -27,79 +27,31 @@ class _HomeViewState extends State<HomeView> {
     {"image": "assets/img/cat_3.png", "name": "Italian"},
     {"image": "assets/img/cat_4.png", "name": "Indian"},
   ];
+  List<dynamic> popArr = []; // Dynamic list for popular restaurants.
 
-  List popArr = [
-    {
-      "image": "assets/img/res_1.png",
-      "name": "Minute by tuk tuk",
-      "rate": "4.9",
-      "rating": "124",
-      "type": "Cafa",
-      "food_type": "Western Food"
-    },
-    {
-      "image": "assets/img/res_2.png",
-      "name": "Café de Noir",
-      "rate": "4.9",
-      "rating": "124",
-      "type": "Cafa",
-      "food_type": "Western Food"
-    },
-    {
-      "image": "assets/img/res_3.png",
-      "name": "Bakes by Tella",
-      "rate": "4.9",
-      "rating": "124",
-      "type": "Cafa",
-      "food_type": "Western Food"
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    fetchRegions(); // Fetch regions from Supabase on initialization.
+  }
 
-  List mostPopArr = [
-    {
-      "image": "assets/img/m_res_1.png",
-      "name": "Minute by tuk tuk",
-      "rate": "4.9",
-      "rating": "124",
-      "type": "Cafa",
-      "food_type": "Western Food"
-    },
-    {
-      "image": "assets/img/m_res_2.png",
-      "name": "Café de Noir",
-      "rate": "4.9",
-      "rating": "124",
-      "type": "Cafa",
-      "food_type": "Western Food"
-    },
-  ];
-
-  List recentArr = [
-    {
-      "image": "assets/img/item_1.png",
-      "name": "Mulberry Pizza by Josh",
-      "rate": "4.9",
-      "rating": "124",
-      "type": "Cafa",
-      "food_type": "Western Food"
-    },
-    {
-      "image": "assets/img/item_2.png",
-      "name": "Barita",
-      "rate": "4.9",
-      "rating": "124",
-      "type": "Cafa",
-      "food_type": "Western Food"
-    },
-    {
-      "image": "assets/img/item_3.png",
-      "name": "Pizza Rush Hour",
-      "rate": "4.9",
-      "rating": "124",
-      "type": "Cafa",
-      "food_type": "Western Food"
-    },
-  ];
+  // Function to fetch regions from Supabase
+  Future<void> fetchRegions() async {
+    try {
+      final response = await Supabase.instance.client
+          .from('region') // Replace 'region' with your table name
+          .select('id, name, photo_couverture');
+      // print("the response $response");
+      if (response != null) {
+        setState(() {
+          popArr = response as List<dynamic>;
+        });
+        // print("Error fetching regions: ${response.message}");
+      }
+    } catch (e) {
+      print("Error: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -228,56 +180,34 @@ class _HomeViewState extends State<HomeView> {
                 shrinkWrap: true,
                 padding: EdgeInsets.zero,
                 itemCount: popArr.length,
-                itemBuilder: ((context, index) {
-                  var pObj = popArr[index] as Map? ?? {};
+                itemBuilder: (context, index) {
+                  final pObj = popArr[index];
                   return PopularRestaurantRow(
-                    pObj: pObj,
-                    onTap: () {},
+                    pObj: {
+                      "image": pObj['photo_couverture'], // Image from Supabase
+                      "name": pObj['name'], // Name from Supabase
+                      "rate":
+                          "4.9", // Dummy data (or replace with real ratings)
+                      "rating":
+                          "124", // Dummy data (or replace with real ratings)
+                      "type":
+                          "Region", // Dummy type (or replace with relevant type)
+                      "food_type": "Western Food", // Dummy food type
+                    },
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => RestaurantListView(
+                            regionId: pObj['id'],
+                            regionName: pObj['name'], // Pass the region ID
+                          ),
+                        ),
+                      );
+                    },
                   );
-                }),
+                },
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: ViewAllTitleRow(
-                  title: "Most Popular",
-                  onView: () {},
-                ),
-              ),
-              SizedBox(
-                height: 200,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 15),
-                  itemCount: mostPopArr.length,
-                  itemBuilder: ((context, index) {
-                    var mObj = mostPopArr[index] as Map? ?? {};
-                    return MostPopularCell(
-                      mObj: mObj,
-                      onTap: () {},
-                    );
-                  }),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: ViewAllTitleRow(
-                  title: "Recent Items",
-                  onView: () {},
-                ),
-              ),
-              ListView.builder(
-                physics: const NeverScrollableScrollPhysics(),
-                shrinkWrap: true,
-                padding: const EdgeInsets.symmetric(horizontal: 15),
-                itemCount: recentArr.length,
-                itemBuilder: ((context, index) {
-                  var rObj = recentArr[index] as Map? ?? {};
-                  return RecentItemRow(
-                    rObj: rObj,
-                    onTap: () {},
-                  );
-                }),
-              )
             ],
           ),
         ),
@@ -285,3 +215,4 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 }
+
